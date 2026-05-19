@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Syncware 2.0 - Chat, Call, Share 💕</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -13,7 +13,7 @@
             <div class="icon">💕</div>
             <h1>Syncware 2.0</h1>
             <p>Chat • Call • Share images</p>
-            <input type="text" id="nameInput" placeholder="Your name..." maxlength="20">
+            <input type="text" id="nameInput" placeholder="Your name..." maxlength="20" autocomplete="off">
             <button id="startBtn" onclick="startChat()">Start Chatting 💬</button>
             <p class="hint">🔒 All messages & images auto-delete</p>
             <div class="features">
@@ -26,7 +26,7 @@
     </div>
 
     <!-- Chat Screen -->
-    <div id="chatScreen" style="display: none;">
+    <div id="chatScreen">
         <div class="chat-header">
             <div class="header-left">
                 <div class="avatar">💑</div>
@@ -41,12 +41,22 @@
             </div>
         </div>
 
-        <div id="messagesContainer" class="messages-container"></div>
+        <div id="messagesContainer" class="messages-container">
+            <div class="welcome-message">
+                <span>💕</span>
+                <p>Welcome to Syncware!</p>
+                <p class="sub-text">Your private chat. No history stored.</p>
+            </div>
+        </div>
 
         <div class="input-area">
             <button class="image-upload-btn" onclick="sendImage()" title="Send Image">🖼️</button>
-            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
-            <button class="send-btn" onclick="sendMessage()">➤</button>
+            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)" autocomplete="off">
+            <button class="send-btn" onclick="sendMessage()">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
         </div>
     </div>
 
