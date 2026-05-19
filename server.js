@@ -6,7 +6,7 @@ const path = require('path');
 const server = http.createServer((req, res) => {
     if (req.url === '/' || req.url === '/index.html') {
         fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
-            if (err) { res.writeHead(500); return res.end('Error loading page'); }
+            if (err) { res.writeHead(500); return res.end('Error'); }
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(data);
         });
@@ -25,10 +25,6 @@ const server = http.createServer((req, res) => {
             res.end(data);
         });
     }
-    else if (req.url === '/health') {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('OK');
-    }
     else {
         res.writeHead(404);
         res.end('Not Found');
@@ -37,110 +33,130 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocket.Server({ server });
 
-// Store active calls
-const activeCalls = new Map();
+// Store connected users with their WebSocket connections
+const users = new Map();
 
 wss.on('connection', (ws) => {
-    console.log('💚 New connection!');
     let username = '';
+    let userId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+
+    // Send welcome message immediately
+    ws.send(JSON.stringify({
+        type: 'connected',
+        userId: userId,
+        message: 'Connected to Syncware!'
+    }));
 
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
             
-            // Handle different message types
             switch(data.type) {
                 case 'join':
                     username = data.username;
+                    users.set(userId, { ws, username });
+                    
+                    // Notify others
                     broadcast({
-                        type: 'system',
-                        message: `${username} joined 💚`,
+                        type: 'user-joined',
+                        username: username,
+                        userId: userId,
                         timestamp: getTime()
                     }, ws);
+                    
+                    // Send current users list
+                    const userList = Array.from(users.entries()).map(([id, user]) => ({
+                        userId: id,
+                        username: user.username
+                    }));
+                    
+                    ws.send(JSON.stringify({
+                        type: 'users-list',
+                        users: userList
+                    }));
                     break;
 
                 case 'message':
+                    if (data.message.length > 5000) return; // Limit message size
                     broadcast({
                         type: 'message',
                         username: username,
-                        message: data.message,
+                        message: data.message.substring(0, 5000),
                         timestamp: getTime(),
-                        isSent: false
+                        userId: userId
                     }, ws);
                     break;
 
                 case 'image':
+                    // Limit image size to 500KB
+                    if (data.imageData && data.imageData.length > 700000) {
+                        ws.send(JSON.stringify({
+                            type: 'error',
+                            message: 'Image too large. Please use smaller images (max 500KB).'
+                        }));
+                        return;
+                    }
+                    
                     broadcast({
                         type: 'image',
                         username: username,
                         imageData: data.imageData,
                         imageId: data.imageId,
                         timestamp: getTime(),
-                        expiresIn: 600, // 10 minutes in seconds
-                        isSent: false
+                        userId: userId
                     }, ws);
                     break;
 
+                // WebRTC Signaling - Forward immediately
+                case 'call-offer':
+                case 'call-answer':
+                case 'ice-candidate':
                 case 'call-start':
-                    broadcast({
-                        type: 'call-start',
-                        username: username,
-                        callType: data.callType // 'voice' or 'video'
-                    }, ws);
-                    break;
-
                 case 'call-accept':
-                    broadcast({
-                        type: 'call-accept',
-                        username: username
-                    }, ws);
-                    break;
-
                 case 'call-reject':
-                    broadcast({
-                        type: 'call-reject',
-                        username: username
-                    }, ws);
-                    break;
-
                 case 'call-end':
-                    broadcast({
-                        type: 'call-end',
-                        username: username
-                    }, ws);
-                    break;
-
-                case 'webrtc-offer':
-                case 'webrtc-answer':
-                case 'webrtc-ice-candidate':
-                    // Forward WebRTC signaling data
-                    broadcast(data, ws);
+                    // Forward to specific user or broadcast
+                    if (data.targetUserId) {
+                        const targetUser = users.get(data.targetUserId);
+                        if (targetUser && targetUser.ws.readyState === WebSocket.OPEN) {
+                            targetUser.ws.send(JSON.stringify({
+                                ...data,
+                                fromUserId: userId,
+                                fromUsername: username
+                            }));
+                        }
+                    } else {
+                        broadcast(data, ws);
+                    }
                     break;
             }
         } catch (error) {
-            console.log('Error:', error);
+            console.log('Error processing message:', error.message);
         }
     });
 
     ws.on('close', () => {
         if (username) {
+            users.delete(userId);
             broadcast({
-                type: 'system',
-                message: `${username} left 💔`,
+                type: 'user-left',
+                username: username,
+                userId: userId,
                 timestamp: getTime()
             });
         }
     });
+
+    ws.on('error', (error) => {
+        console.log('WebSocket error:', error.message);
+    });
 });
 
 function broadcast(data, sender = null) {
+    const messageStr = JSON.stringify(data);
     wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-            const messageData = {
-                ...data,
-                isSent: client === sender
-            };
-            client.send(JSON.stringify(messageData));
+        if (client.readyState === WebSocket.OPEN && client !== sender) {
+            client.send(messageStr);
         }
     });
 }
@@ -155,7 +171,5 @@ function getTime() {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🚀 Syncware 2.0 running on port ${PORT}`);
-    console.log('📞 Voice/Video calls enabled');
-    console.log('📸 Image sharing with 10-min auto-delete');
+    console.log(`🚀 Syncware running on port ${PORT}`);
 });
