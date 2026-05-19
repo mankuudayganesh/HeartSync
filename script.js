@@ -39,6 +39,9 @@ function startChat() {
         document.getElementById('chatScreen').style.display = 'flex';
         
         addSystemMessage('Connected! Waiting for partner... 💑');
+        
+        // Focus input immediately
+        document.getElementById('messageInput').focus();
     };
 
     ws.onmessage = (event) => {
@@ -131,7 +134,7 @@ function handleMessage(data) {
     }
 }
 
-// ==================== FAST MESSAGING ====================
+// ==================== WHATSAPP-STYLE MESSAGING ====================
 
 function sendMessage() {
     const input = document.getElementById('messageInput');
@@ -145,23 +148,123 @@ function sendMessage() {
         message: text
     }));
     
+    // Add message and scroll to bottom like WhatsApp
     addMessage('You', text, getTime(), true);
+    
     input.value = '';
     input.focus();
 }
 
 function addMessage(sender, text, time, isMine) {
     const container = document.getElementById('messagesContainer');
+    
+    // Check if we need a date separator
+    addDateSeparatorIfNeeded(container);
+    
+    // Check if this message should be grouped with previous
+    const shouldGroup = shouldGroupWithPrevious(container, isMine);
+    
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `message-wrapper ${isMine ? 'message-out' : 'message-in'}`;
+    
     const div = document.createElement('div');
     div.className = `message-bubble ${isMine ? 'message-sent' : 'message-received'}`;
+    
+    if (shouldGroup) {
+        div.classList.add('grouped');
+    }
+    
     div.innerHTML = `
-        <div class="message-name">${isMine ? 'You' : sender}</div>
-        <div>${escapeHtml(text)}</div>
-        <div class="message-time">${time}</div>
+        ${!shouldGroup ? `<div class="message-name">${isMine ? 'You' : sender}</div>` : ''}
+        <div class="message-text">${escapeHtml(text)}</div>
+        <div class="message-meta">
+            <span class="message-time">${time}</span>
+            ${isMine ? '<span class="message-check">✓✓</span>' : ''}
+        </div>
     `;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    
+    messageWrapper.appendChild(div);
+    container.appendChild(messageWrapper);
+    
+    // Scroll to bottom exactly like WhatsApp
+    scrollToBottom(container);
 }
+
+function shouldGroupWithPrevious(container, isMine) {
+    const lastWrapper = container.lastElementChild;
+    if (!lastWrapper) return false;
+    
+    const lastBubble = lastWrapper.querySelector('.message-bubble');
+    if (!lastBubble) return false;
+    
+    // Group if same sender (within 1 minute)
+    const lastIsMine = lastBubble.classList.contains('message-sent');
+    if (lastIsMine !== isMine) return false;
+    
+    // Check time difference
+    const lastTimeEl = lastBubble.querySelector('.message-time');
+    if (!lastTimeEl) return false;
+    
+    const lastTime = lastTimeEl.textContent;
+    const currentTime = getTime();
+    
+    // Simple grouping: if last message was within last minute
+    if (lastBubble.dataset.timestamp) {
+        const diff = Date.now() - parseInt(lastBubble.dataset.timestamp);
+        return diff < 60000; // 1 minute
+    }
+    
+    return false;
+}
+
+function addDateSeparatorIfNeeded(container) {
+    const today = new Date().toDateString();
+    const lastSeparator = container.querySelector('.date-separator:last-child');
+    
+    if (!lastSeparator || lastSeparator.dataset.date !== today) {
+        const separator = document.createElement('div');
+        separator.className = 'date-separator';
+        separator.dataset.date = today;
+        separator.innerHTML = `<span>${formatDate(new Date())}</span>`;
+        container.appendChild(separator);
+    }
+}
+
+function formatDate(date) {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+        return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'Yesterday';
+    } else {
+        return date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+        });
+    }
+}
+
+function scrollToBottom(container) {
+    // Smooth scroll to bottom like WhatsApp
+    requestAnimationFrame(() => {
+        container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth'
+        });
+    });
+}
+
+// Scroll to bottom on load
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('messagesContainer');
+    if (container) {
+        scrollToBottom(container);
+    }
+});
 
 // ==================== IMAGE WITH CAMERA & GALLERY ====================
 
@@ -172,10 +275,11 @@ function sendImage() {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.8); z-index: 9999;
         display: flex; align-items: center; justify-content: center;
+        animation: fadeIn 0.2s ease;
     `;
     
     overlay.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 300px; width: 90%;">
+        <div style="background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 300px; width: 90%; animation: slideUp 0.3s ease;">
             <h3 style="margin-bottom: 20px; color: #333;">Send Image 📸</h3>
             <button id="cameraBtn" style="display: block; width: 100%; padding: 15px; margin-bottom: 10px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 12px; font-size: 16px; cursor: pointer;">
                 📷 Take Photo
@@ -260,7 +364,6 @@ async function processAndSendImage(file) {
         }));
         
         addImageMessage('You', compressedImage, imageId, getTime(), true);
-        addSystemMessage('✅ Image sent!');
         
     } catch (error) {
         console.error('Image error:', error);
@@ -302,6 +405,10 @@ async function compressImage(file, maxWidth, quality) {
 
 function addImageMessage(sender, imageData, imageId, time, isMine) {
     const container = document.getElementById('messagesContainer');
+    
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `message-wrapper ${isMine ? 'message-out' : 'message-in'}`;
+    
     const div = document.createElement('div');
     div.className = `message-bubble ${isMine ? 'message-sent' : 'message-received'}`;
     div.id = imageId;
@@ -316,12 +423,16 @@ function addImageMessage(sender, imageData, imageId, time, isMine) {
             <button class="download-btn" onclick="event.stopPropagation(); saveToGallery('${imageId}')">💾 Save</button>
             <button class="delete-btn" onclick="event.stopPropagation(); deleteImage('${imageId}')">🗑️</button>
         </div>
-        <div class="message-time">${time}</div>
+        <div class="message-meta">
+            <span class="message-time">${time}</span>
+            ${isMine ? '<span class="message-check">✓✓</span>' : ''}
+        </div>
     `;
     
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    messageWrapper.appendChild(div);
+    container.appendChild(messageWrapper);
     
+    scrollToBottom(container);
     startImageTimer(imageId);
 }
 
@@ -351,11 +462,14 @@ function startImageTimer(imageId) {
 function deleteImage(imageId) {
     const element = document.getElementById(imageId);
     if (element) {
-        element.style.opacity = '0';
-        element.style.transition = 'opacity 0.3s';
-        setTimeout(() => {
-            if (element.parentNode) element.remove();
-        }, 300);
+        const wrapper = element.closest('.message-wrapper');
+        if (wrapper) {
+            wrapper.style.opacity = '0';
+            wrapper.style.transition = 'opacity 0.3s';
+            setTimeout(() => {
+                if (wrapper.parentNode) wrapper.remove();
+            }, 300);
+        }
         addSystemMessage('🖼️ Image deleted');
     }
 }
@@ -414,7 +528,6 @@ async function startCall(callType) {
     callAccepted = false;
     
     try {
-        // OPTIMIZED AUDIO FOR CRYSTAL CLEAR VOICE
         const constraints = {
             audio: {
                 echoCancellation: true,
@@ -438,7 +551,7 @@ async function startCall(callType) {
             alert('No microphone found! Please check your device.');
             return;
         }
-        console.log('🎤 Audio track:', audioTrack.label, 'Settings:', audioTrack.getSettings());
+        console.log('🎤 Audio track:', audioTrack.label);
         
         document.getElementById('callScreen').style.display = 'flex';
         document.getElementById('localVideo').srcObject = localStream;
@@ -448,7 +561,6 @@ async function startCall(callType) {
         
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
-            console.log('➕ Added track:', track.kind);
         });
         
         ws.send(JSON.stringify({
@@ -470,8 +582,6 @@ async function startCall(callType) {
                     targetUserId: remoteUserId,
                     offer: offer
                 }));
-                
-                console.log('📤 Offer sent with HD audio settings');
             } catch (error) {
                 console.error('Offer error:', error);
             }
@@ -481,8 +591,6 @@ async function startCall(callType) {
         console.error('Call error:', error);
         if (error.name === 'NotAllowedError') {
             alert('Please allow microphone access to make calls!');
-        } else if (error.name === 'NotFoundError') {
-            alert('No microphone found on your device.');
         } else {
             alert('Failed to start call. Error: ' + error.message);
         }
@@ -503,7 +611,6 @@ async function createPeerConnection() {
     
     peerConnection = new RTCPeerConnection(configuration);
     
-    // Set audio codec preferences for HD voice
     const audioTransceiver = peerConnection.addTransceiver('audio', {
         direction: 'sendrecv',
         streams: []
@@ -517,10 +624,8 @@ async function createPeerConnection() {
         if (opusCodec) {
             try {
                 audioTransceiver.setCodecPreferences([opusCodec]);
-                console.log('🎵 Set Opus codec for HD audio');
-            } catch (e) {
-                console.log('Codec preference not supported');
-            }
+                console.log('🎵 Opus HD codec set');
+            } catch (e) {}
         }
     }
     
@@ -535,14 +640,13 @@ async function createPeerConnection() {
     };
     
     peerConnection.ontrack = (event) => {
-        console.log('📹 Got remote track:', event.track.kind);
+        console.log('📹 Got track:', event.track.kind);
         const remoteVideo = document.getElementById('remoteVideo');
         
         if (event.track.kind === 'audio') {
             const remoteAudio = new Audio();
             remoteAudio.srcObject = new MediaStream([event.track]);
             remoteAudio.play().catch(e => console.log('Audio play error:', e));
-            console.log('🔊 Remote audio playing through Opus HD codec');
         }
         
         if (event.track.kind === 'video') {
@@ -553,28 +657,16 @@ async function createPeerConnection() {
     };
     
     peerConnection.onconnectionstatechange = () => {
-        console.log('📡 Connection state:', peerConnection.connectionState);
-        
-        switch(peerConnection.connectionState) {
-            case 'connected':
-                document.getElementById('callStatus').textContent = 'Connected! 📞';
-                break;
-            case 'disconnected':
-                document.getElementById('callStatus').textContent = 'Reconnecting...';
-                break;
-            case 'failed':
-                endCall();
-                break;
+        if (peerConnection.connectionState === 'connected') {
+            document.getElementById('callStatus').textContent = 'Connected! 📞';
+        } else if (peerConnection.connectionState === 'failed') {
+            endCall();
         }
     };
     
     peerConnection.oniceconnectionstatechange = () => {
-        console.log('🧊 ICE state:', peerConnection.iceConnectionState);
-        
-        if (peerConnection.iceConnectionState === 'connected') {
-            document.getElementById('callStatus').textContent = 'Connected! 📞';
-        } else if (peerConnection.iceConnectionState === 'disconnected' || 
-                   peerConnection.iceConnectionState === 'failed') {
+        if (peerConnection.iceConnectionState === 'disconnected' || 
+            peerConnection.iceConnectionState === 'failed') {
             endCall();
         }
     };
@@ -741,7 +833,7 @@ function addSystemMessage(text) {
     div.className = 'system-message';
     div.textContent = text;
     container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    scrollToBottom(container);
 }
 
 function getTime() {
@@ -764,4 +856,33 @@ function handleKeyPress(event) {
     }
 }
 
-console.log('⚡ Syncware loaded! HD Voice Calls + Camera/Gallery Images ready!');
+// Keep chat scrolled to bottom on window resize
+window.addEventListener('resize', () => {
+    const container = document.getElementById('messagesContainer');
+    if (container) {
+        scrollToBottom(container);
+    }
+});
+
+// Initial scroll when chat screen becomes visible
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.target.id === 'chatScreen' && 
+            mutation.target.style.display === 'flex') {
+            const container = document.getElementById('messagesContainer');
+            if (container) {
+                setTimeout(() => scrollToBottom(container), 100);
+            }
+        }
+    });
+});
+
+const chatScreen = document.getElementById('chatScreen');
+if (chatScreen) {
+    observer.observe(chatScreen, { 
+        attributes: true, 
+        attributeFilter: ['style'] 
+    });
+}
+
+console.log('⚡ Syncware loaded! WhatsApp-style chat with HD calls & images!');
