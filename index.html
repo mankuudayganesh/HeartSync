@@ -3,19 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Syncware - Private Chat 💕</title>
+    <title>Syncware 2.0 - Chat, Call, Share 💕</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Login Screen -->
     <div id="loginScreen">
         <div class="login-card">
-            <div class="heart-icon">💕</div>
-            <h1>Syncware</h1>
-            <p>Private chat. No history. Just us.</p>
+            <div class="icon">💕</div>
+            <h1>Syncware 2.0</h1>
+            <p>Chat • Call • Share images</p>
             <input type="text" id="nameInput" placeholder="Your name..." maxlength="20">
             <button id="startBtn" onclick="startChat()">Start Chatting 💬</button>
-            <p class="hint">🔒 Messages disappear when you close this tab</p>
+            <p class="hint">🔒 All messages & images auto-delete</p>
+            <div class="features">
+                <span>💬 Chat</span>
+                <span>📞 Call</span>
+                <span>📸 Images</span>
+                <span>⏰ 10min</span>
+            </div>
         </div>
     </div>
 
@@ -23,20 +29,56 @@
     <div id="chatScreen" style="display: none;">
         <div class="chat-header">
             <div class="header-left">
-                <span class="avatar">💑</span>
+                <div class="avatar">💑</div>
                 <div>
                     <h2>Syncware Chat</h2>
                     <p class="status">🟢 Connected</p>
                 </div>
             </div>
-            <span class="badge">🔒 No storage</span>
+            <div class="header-actions">
+                <button class="call-btn" onclick="startCall('voice')" title="Voice Call">📞</button>
+                <button class="call-btn" onclick="startCall('video')" title="Video Call">📹</button>
+            </div>
         </div>
 
         <div id="messagesContainer" class="messages-container"></div>
 
         <div class="input-area">
-            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button onclick="sendMessage()" class="send-btn">➤</button>
+            <button class="image-upload-btn" onclick="sendImage()" title="Send Image">🖼️</button>
+            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+            <button class="send-btn" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <!-- Call Screen -->
+    <div id="callScreen">
+        <div class="call-header">
+            <span id="callStatus">Calling...</span>
+        </div>
+        <div class="video-container">
+            <div class="video-box">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div class="video-label">You</div>
+            </div>
+            <div class="video-box">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="video-label">Partner</div>
+            </div>
+        </div>
+        <div class="call-controls">
+            <button class="call-control-btn mute-btn" onclick="toggleMute()">🎤</button>
+            <button class="call-control-btn end-call" onclick="endCall()">📞</button>
+        </div>
+    </div>
+
+    <!-- Incoming Call Notification -->
+    <div id="incomingCall">
+        <div style="font-size: 50px; margin-bottom: 15px;">📞</div>
+        <h3><span id="callerName"></span> is calling...</h3>
+        <p id="callType" style="color: #666;"></p>
+        <div class="incoming-actions">
+            <button class="accept-btn" onclick="acceptCall()">✅</button>
+            <button class="reject-btn" onclick="rejectCall()">❌</button>
         </div>
     </div>
 
