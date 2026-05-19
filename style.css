@@ -10,7 +10,6 @@ body {
     min-height: 100vh;
 }
 
-/* Login Screen */
 #loginScreen {
     display: flex;
     justify-content: center;
@@ -55,7 +54,6 @@ body {
     border-radius: 12px;
     font-size: 16px;
     outline: none;
-    transition: border-color 0.3s;
 }
 
 #nameInput:focus {
@@ -72,11 +70,10 @@ body {
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s;
 }
 
-#startBtn:hover {
-    transform: scale(1.02);
+#startBtn:disabled {
+    opacity: 0.7;
 }
 
 .hint {
@@ -94,12 +91,6 @@ body {
     color: #888;
 }
 
-.features span {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
 /* Chat Screen */
 #chatScreen {
     display: none;
@@ -107,11 +98,9 @@ body {
     margin: 0 auto;
     height: 100vh;
     background: white;
-    display: flex;
     flex-direction: column;
 }
 
-/* Header */
 .chat-header {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
@@ -161,24 +150,12 @@ body {
     border-radius: 50%;
     cursor: pointer;
     font-size: 18px;
-    transition: background 0.3s;
 }
 
 .call-btn:hover {
     background: rgba(255,255,255,0.4);
 }
 
-.call-btn.active {
-    background: #ff4444;
-    animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-/* Messages */
 .messages-container {
     flex: 1;
     padding: 20px;
@@ -192,8 +169,7 @@ body {
     margin-bottom: 10px;
     border-radius: 15px;
     word-wrap: break-word;
-    position: relative;
-    animation: slideIn 0.3s ease;
+    animation: slideIn 0.2s ease;
 }
 
 @keyframes slideIn {
@@ -229,19 +205,16 @@ body {
     opacity: 0.7;
 }
 
-/* Image Messages */
-.image-message {
-    max-width: 250px;
-    border-radius: 10px;
-    overflow: hidden;
-    cursor: pointer;
+.image-container {
     position: relative;
+    cursor: pointer;
+    max-width: 250px;
 }
 
-.image-message img {
+.chat-image {
     width: 100%;
-    display: block;
     border-radius: 10px;
+    display: block;
 }
 
 .image-timer {
@@ -262,7 +235,7 @@ body {
 }
 
 .download-btn, .delete-btn {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.3);
     border: none;
     color: white;
     padding: 5px 10px;
@@ -271,26 +244,20 @@ body {
     font-size: 12px;
 }
 
-.sent .download-btn, .sent .delete-btn {
-    color: white;
-    background: rgba(255,255,255,0.3);
-}
-
-.received .download-btn, .received .delete-btn {
+.message-received .download-btn,
+.message-received .delete-btn {
     background: #f0f0f0;
     color: #333;
 }
 
-/* System Messages */
 .system-message {
     text-align: center;
     margin: 10px 0;
     font-size: 12px;
     color: #999;
-    animation: slideIn 0.3s ease;
+    animation: slideIn 0.2s ease;
 }
 
-/* Input Area */
 .input-area {
     padding: 15px;
     background: white;
@@ -315,7 +282,6 @@ body {
     border-radius: 25px;
     font-size: 15px;
     outline: none;
-    transition: border-color 0.3s;
 }
 
 #messageInput:focus {
@@ -331,11 +297,6 @@ body {
     color: white;
     font-size: 20px;
     cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.send-btn:hover {
-    transform: scale(1.1);
 }
 
 /* Call Screen */
@@ -355,18 +316,20 @@ body {
 
 .call-header {
     color: white;
-    font-size: 24px;
+    font-size: 20px;
     margin-bottom: 20px;
 }
 
 .video-container {
     display: flex;
-    gap: 20px;
+    gap: 15px;
     margin-bottom: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .video-box {
-    width: 300px;
+    width: 280px;
     height: 200px;
     background: #333;
     border-radius: 15px;
@@ -403,11 +366,6 @@ body {
     border: none;
     cursor: pointer;
     font-size: 24px;
-    transition: transform 0.2s;
-}
-
-.call-control-btn:hover {
-    transform: scale(1.1);
 }
 
 .end-call {
@@ -420,7 +378,7 @@ body {
     color: white;
 }
 
-/* Incoming Call Notification */
+/* Incoming Call */
 #incomingCall {
     display: none;
     position: fixed;
@@ -461,15 +419,13 @@ body {
     color: white;
 }
 
-/* Responsive */
 @media (max-width: 600px) {
-    #chatScreen {
-        max-width: 100%;
-        border-radius: 0;
+    .video-box {
+        width: 160px;
+        height: 140px;
     }
     
-    .video-box {
-        width: 150px;
-        height: 120px;
+    #chatScreen {
+        max-width: 100%;
     }
 }
