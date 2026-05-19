@@ -8,6 +8,8 @@ let localStream = null;
 let peerConnection = null;
 let currentCallType = null;
 let remoteUserId = null;
+let isCaller = false;
+let callAccepted = false;
 
 // ==================== QUICK CONNECT ====================
 
@@ -19,37 +21,24 @@ function startChat() {
         return;
     }
 
-    // Show connecting state
     const btn = document.getElementById('startBtn');
     btn.textContent = 'Connecting...';
     btn.disabled = true;
 
-    // Connect with timeout
-    const connectTimeout = setTimeout(() => {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            alert('Connection timeout! Server might be waking up. Try again in 30 seconds.');
-            btn.textContent = 'Start Chatting 💬';
-            btn.disabled = false;
-        }
-    }, 15000);
-
     ws = new WebSocket(BACKEND_URL);
 
     ws.onopen = () => {
-        clearTimeout(connectTimeout);
-        console.log('⚡ Connected instantly!');
+        console.log('⚡ Connected!');
         
-        // Join immediately
         ws.send(JSON.stringify({
             type: 'join',
             username: myName
         }));
 
-        // Show chat screen
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('chatScreen').style.display = 'flex';
         
-        addSystemMessage('Connected! Waiting for your partner... 💑');
+        addSystemMessage('Connected! Waiting for partner... 💑');
     };
 
     ws.onmessage = (event) => {
@@ -57,15 +46,13 @@ function startChat() {
         
         if (data.type === 'connected') {
             myUserId = data.userId;
-            console.log('My ID:', myUserId);
         } else {
             handleMessage(data);
         }
     };
 
-    ws.onerror = (error) => {
-        console.error('Connection error');
-        alert('Connection failed. The server might be starting up. Please try again in 30 seconds.');
+    ws.onerror = () => {
+        alert('Connection failed. Server might be waking up. Try again in 30 seconds.');
         btn.textContent = 'Start Chatting 💬';
         btn.disabled = false;
     };
@@ -81,20 +68,23 @@ function handleMessage(data) {
     switch(data.type) {
         case 'user-joined':
             addSystemMessage(`${data.username} joined! 💚`);
-            if (!remoteUserId) remoteUserId = data.userId;
+            remoteUserId = data.userId;
+            // Update partner name in header
+            document.querySelector('.status').textContent = `🟢 ${data.username} online`;
             break;
             
         case 'user-left':
             addSystemMessage(`${data.username} left 💔`);
+            remoteUserId = null;
+            document.querySelector('.status').textContent = '🟢 Waiting for partner...';
             break;
             
         case 'users-list':
-            if (data.users.length > 1) {
-                const otherUser = data.users.find(u => u.userId !== myUserId);
-                if (otherUser) {
-                    remoteUserId = otherUser.userId;
-                    addSystemMessage(`${otherUser.username} is online! 🟢`);
-                }
+            const otherUser = data.users.find(u => u.userId !== myUserId);
+            if (otherUser) {
+                remoteUserId = otherUser.userId;
+                addSystemMessage(`${otherUser.username} is online! 🟢`);
+                document.querySelector('.status').textContent = `🟢 ${otherUser.username} online`;
             }
             break;
             
@@ -106,12 +96,14 @@ function handleMessage(data) {
             addImageMessage(data.username, data.imageData, data.imageId, data.timestamp, data.userId === myUserId);
             break;
             
+        // CALL SIGNALING
         case 'call-start':
             handleIncomingCall(data);
             break;
             
         case 'call-accept':
-            document.getElementById('callStatus').textContent = 'Connected! 📞';
+            callAccepted = true;
+            document.getElementById('callStatus').textContent = 'Partner accepted! Connecting... 📞';
             break;
             
         case 'call-reject':
@@ -145,23 +137,19 @@ function sendMessage() {
     
     if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
     
-    // Send instantly - no delay
     ws.send(JSON.stringify({
         type: 'message',
         username: myName,
         message: text
     }));
     
-    // Optimistic UI update
     addMessage('You', text, getTime(), true);
-    
     input.value = '';
     input.focus();
 }
 
 function addMessage(sender, text, time, isMine) {
     const container = document.getElementById('messagesContainer');
-    
     const div = document.createElement('div');
     div.className = `message-bubble ${isMine ? 'message-sent' : 'message-received'}`;
     div.innerHTML = `
@@ -169,54 +157,119 @@ function addMessage(sender, text, time, isMine) {
         <div>${escapeHtml(text)}</div>
         <div class="message-time">${time}</div>
     `;
-    
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 }
 
-// ==================== FAST IMAGE SHARING ====================
+// ==================== IMAGE WITH CAMERA & GALLERY OPTION ====================
 
 function sendImage() {
+    // Show option dialog
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+    `;
+    
+    overlay.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 300px;">
+            <h3 style="margin-bottom: 20px;">Send Image 📸</h3>
+            <button id="cameraBtn" style="display: block; width: 100%; padding: 15px; margin-bottom: 10px; background: #667eea; color: white; border: none; border-radius: 12px; font-size: 16px; cursor: pointer;">
+                📷 Take Photo
+            </button>
+            <button id="galleryBtn" style="display: block; width: 100%; padding: 15px; margin-bottom: 10px; background: #764ba2; color: white; border: none; border-radius: 12px; font-size: 16px; cursor: pointer;">
+                🖼️ Choose from Gallery
+            </button>
+            <button id="cancelBtn" style="display: block; width: 100%; padding: 12px; background: #e0e0e0; color: #333; border: none; border-radius: 12px; font-size: 14px; cursor: pointer;">
+                Cancel
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Camera button
+    document.getElementById('cameraBtn').onclick = () => {
+        document.body.removeChild(overlay);
+        openCamera();
+    };
+    
+    // Gallery button
+    document.getElementById('galleryBtn').onclick = () => {
+        document.body.removeChild(overlay);
+        openGallery();
+    };
+    
+    // Cancel button
+    document.getElementById('cancelBtn').onclick = () => {
+        document.body.removeChild(overlay);
+    };
+    
+    // Also close on overlay click
+    overlay.onclick = (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+        }
+    };
+}
+
+function openCamera() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.capture = 'environment'; // Use rear camera on mobile
+    input.capture = 'environment'; // Opens rear camera on mobile
     
     input.onchange = async (e) => {
         const file = e.target.files[0];
-        if (!file) return;
-        
-        // Show uploading indicator
-        addSystemMessage('📤 Compressing and sending image...');
-        
-        try {
-            // Compress image before sending
-            const compressedImage = await compressImage(file, 800, 0.6);
-            
-            if (compressedImage.length > 500000) {
-                alert('Image still too large after compression. Please try a smaller image.');
-                return;
-            }
-            
-            const imageId = 'img_' + Date.now();
-            
-            ws.send(JSON.stringify({
-                type: 'image',
-                username: myName,
-                imageData: compressedImage,
-                imageId: imageId
-            }));
-            
-            // Optimistic UI update
-            addImageMessage('You', compressedImage, imageId, getTime(), true);
-            
-        } catch (error) {
-            console.error('Image error:', error);
-            alert('Failed to process image. Please try again.');
-        }
+        if (file) await processAndSendImage(file);
     };
     
     input.click();
+}
+
+function openGallery() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    // No capture attribute = opens file picker/gallery
+    
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) await processAndSendImage(file);
+    };
+    
+    input.click();
+}
+
+async function processAndSendImage(file) {
+    addSystemMessage('📤 Processing image...');
+    
+    try {
+        // Compress image
+        const compressedImage = await compressImage(file, 800, 0.6);
+        
+        if (compressedImage.length > 500000) {
+            alert('Image too large after compression. Try a smaller image.');
+            return;
+        }
+        
+        const imageId = 'img_' + Date.now();
+        
+        ws.send(JSON.stringify({
+            type: 'image',
+            username: myName,
+            imageData: compressedImage,
+            imageId: imageId
+        }));
+        
+        addImageMessage('You', compressedImage, imageId, getTime(), true);
+        addSystemMessage('✅ Image sent!');
+        
+    } catch (error) {
+        console.error('Image error:', error);
+        alert('Failed to send image. Please try again.');
+    }
 }
 
 async function compressImage(file, maxWidth, quality) {
@@ -229,7 +282,6 @@ async function compressImage(file, maxWidth, quality) {
                 let width = img.width;
                 let height = img.height;
                 
-                // Resize if too large
                 if (width > maxWidth) {
                     height = (maxWidth / width) * height;
                     width = maxWidth;
@@ -241,7 +293,6 @@ async function compressImage(file, maxWidth, quality) {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // Compress to JPEG
                 const compressed = canvas.toDataURL('image/jpeg', quality);
                 resolve(compressed);
             };
@@ -255,7 +306,6 @@ async function compressImage(file, maxWidth, quality) {
 
 function addImageMessage(sender, imageData, imageId, time, isMine) {
     const container = document.getElementById('messagesContainer');
-    
     const div = document.createElement('div');
     div.className = `message-bubble ${isMine ? 'message-sent' : 'message-received'}`;
     div.id = imageId;
@@ -267,8 +317,8 @@ function addImageMessage(sender, imageData, imageId, time, isMine) {
             <div class="image-timer" id="timer_${imageId}">10:00</div>
         </div>
         <div class="image-actions">
-            <button class="download-btn" onclick="saveToGallery('${imageId}')">💾 Save</button>
-            <button class="delete-btn" onclick="deleteImage('${imageId}')">🗑️</button>
+            <button class="download-btn" onclick="event.stopPropagation(); saveToGallery('${imageId}')">💾 Save</button>
+            <button class="delete-btn" onclick="event.stopPropagation(); deleteImage('${imageId}')">🗑️</button>
         </div>
         <div class="message-time">${time}</div>
     `;
@@ -276,12 +326,11 @@ function addImageMessage(sender, imageData, imageId, time, isMine) {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
     
-    // Start 10-minute timer
     startImageTimer(imageId);
 }
 
 function startImageTimer(imageId) {
-    const deleteTime = Date.now() + 600000; // 10 minutes
+    const deleteTime = Date.now() + 600000;
     
     const interval = setInterval(() => {
         const timeLeft = Math.max(0, deleteTime - Date.now());
@@ -291,8 +340,7 @@ function startImageTimer(imageId) {
         const timerEl = document.getElementById(`timer_${imageId}`);
         if (timerEl) {
             timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            
-            if (timeLeft <= 30000) { // Last 30 seconds - turn red
+            if (timeLeft <= 30000) {
                 timerEl.style.background = '#ff4444';
             }
         }
@@ -310,7 +358,7 @@ function deleteImage(imageId) {
         element.style.opacity = '0';
         element.style.transition = 'opacity 0.3s';
         setTimeout(() => element.remove(), 300);
-        addSystemMessage('🖼️ Image auto-deleted');
+        addSystemMessage('🖼️ Image deleted');
     }
 }
 
@@ -321,7 +369,6 @@ function saveToGallery(imageId) {
     const img = element.querySelector('img');
     if (!img) return;
     
-    // Create download link
     const link = document.createElement('a');
     link.href = img.src;
     link.download = `syncware_${imageId}.jpg`;
@@ -329,12 +376,7 @@ function saveToGallery(imageId) {
     link.click();
     document.body.removeChild(link);
     
-    // For mobile - share API
-    if (navigator.share) {
-        // Optional: Use Web Share API
-    }
-    
-    addSystemMessage('💾 Image saved to your device!');
+    addSystemMessage('💾 Image saved to device!');
 }
 
 function viewFullImage(imageId) {
@@ -361,18 +403,19 @@ function viewFullImage(imageId) {
     document.body.appendChild(overlay);
 }
 
-// ==================== WORKING CALLS ====================
+// ==================== FIXED CALLS ====================
 
 async function startCall(callType) {
     if (!remoteUserId) {
-        alert('No one else is connected! Wait for your partner to join.');
+        alert('No partner connected! Wait for them to join first.');
         return;
     }
     
     currentCallType = callType;
+    isCaller = true;
+    callAccepted = false;
     
     try {
-        // Request permissions with audio always, video optional
         const constraints = {
             audio: true,
             video: callType === 'video' ? { width: 640, height: 480 } : false
@@ -384,42 +427,44 @@ async function startCall(callType) {
         document.getElementById('localVideo').srcObject = localStream;
         document.getElementById('callStatus').textContent = 'Calling... 📞';
         
-        // Create peer connection
+        // Create peer connection FIRST
         await createPeerConnection();
         
-        // Add tracks
+        // Add local tracks
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
         
-        // Create offer
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        
-        // Send call start with offer
+        // Send call start
         ws.send(JSON.stringify({
             type: 'call-start',
             targetUserId: remoteUserId,
             callType: callType
         }));
         
-        ws.send(JSON.stringify({
-            type: 'call-offer',
-            targetUserId: remoteUserId,
-            offer: offer
-        }));
+        // Create and send offer AFTER a short delay to ensure remote side is ready
+        setTimeout(async () => {
+            try {
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                
+                ws.send(JSON.stringify({
+                    type: 'call-offer',
+                    targetUserId: remoteUserId,
+                    offer: offer
+                }));
+            } catch (error) {
+                console.error('Offer error:', error);
+            }
+        }, 1000);
         
     } catch (error) {
         console.error('Call error:', error);
-        
         if (error.name === 'NotAllowedError') {
-            alert('Please allow camera/microphone access to make calls!');
-        } else if (error.name === 'NotFoundError') {
-            alert('No camera or microphone found on your device.');
+            alert('Please allow camera/microphone access!');
         } else {
-            alert('Failed to start call. Please try again.');
+            alert('Failed to start call. Check permissions.');
         }
-        
         endCall();
     }
 }
@@ -445,7 +490,7 @@ async function createPeerConnection() {
     };
     
     peerConnection.ontrack = (event) => {
-        console.log('Got remote track!');
+        console.log('📹 Got remote track!');
         const remoteVideo = document.getElementById('remoteVideo');
         remoteVideo.srcObject = event.streams[0];
         document.getElementById('callStatus').textContent = 'Connected! 📞';
@@ -453,8 +498,10 @@ async function createPeerConnection() {
     
     peerConnection.oniceconnectionstatechange = () => {
         console.log('ICE state:', peerConnection.iceConnectionState);
-        if (peerConnection.iceConnectionState === 'disconnected' || 
-            peerConnection.iceConnectionState === 'failed') {
+        if (peerConnection.iceConnectionState === 'connected') {
+            document.getElementById('callStatus').textContent = 'Connected! 📞';
+        } else if (peerConnection.iceConnectionState === 'disconnected' || 
+                   peerConnection.iceConnectionState === 'failed') {
             endCall();
         }
     };
@@ -463,18 +510,16 @@ async function createPeerConnection() {
 function handleIncomingCall(data) {
     currentCallType = data.callType;
     remoteUserId = data.fromUserId;
+    isCaller = false;
     
     document.getElementById('callerName').textContent = data.fromUsername;
     document.getElementById('callType').textContent = data.callType === 'video' ? '📹 Video Call' : '📞 Voice Call';
     document.getElementById('incomingCall').style.display = 'block';
-    
-    // Auto-ring sound (optional)
-    playRingtone();
 }
 
 async function acceptCall() {
     document.getElementById('incomingCall').style.display = 'none';
-    stopRingtone();
+    callAccepted = true;
     
     try {
         const constraints = {
@@ -494,22 +539,21 @@ async function acceptCall() {
             peerConnection.addTrack(track, localStream);
         });
         
+        // Send accept signal
         ws.send(JSON.stringify({
             type: 'call-accept',
             targetUserId: remoteUserId
         }));
         
     } catch (error) {
-        console.error('Accept call error:', error);
-        alert('Failed to accept call. Check camera/microphone permissions.');
+        console.error('Accept error:', error);
+        alert('Failed to accept call. Check permissions.');
         endCall();
     }
 }
 
 function rejectCall() {
     document.getElementById('incomingCall').style.display = 'none';
-    stopRingtone();
-    
     ws.send(JSON.stringify({
         type: 'call-reject',
         targetUserId: remoteUserId
@@ -517,30 +561,46 @@ function rejectCall() {
 }
 
 async function handleCallOffer(data) {
+    console.log('📩 Received offer');
+    remoteUserId = data.fromUserId;
+    
     if (!peerConnection) {
         await createPeerConnection();
         
-        localStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, localStream);
-        });
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+        }
     }
     
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-    
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    
-    ws.send(JSON.stringify({
-        type: 'call-answer',
-        targetUserId: data.fromUserId,
-        answer: answer
-    }));
+    try {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+        
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        
+        ws.send(JSON.stringify({
+            type: 'call-answer',
+            targetUserId: data.fromUserId,
+            answer: answer
+        }));
+        
+    } catch (error) {
+        console.error('Offer handling error:', error);
+    }
 }
 
 async function handleCallAnswer(data) {
+    console.log('📩 Received answer');
+    
     if (peerConnection) {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-        document.getElementById('callStatus').textContent = 'Connected! 📞';
+        try {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            document.getElementById('callStatus').textContent = 'Connected! 📞';
+        } catch (error) {
+            console.error('Answer handling error:', error);
+        }
     }
 }
 
@@ -569,14 +629,15 @@ function endCall() {
     document.getElementById('localVideo').srcObject = null;
     document.getElementById('remoteVideo').srcObject = null;
     
-    if (remoteUserId) {
+    if (remoteUserId && ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
             type: 'call-end',
             targetUserId: remoteUserId
         }));
     }
     
-    stopRingtone();
+    isCaller = false;
+    callAccepted = false;
 }
 
 function toggleMute() {
@@ -586,40 +647,6 @@ function toggleMute() {
             audioTrack.enabled = !audioTrack.enabled;
             document.querySelector('.mute-btn').textContent = audioTrack.enabled ? '🎤' : '🔇';
         }
-    }
-}
-
-// ==================== RINGTONE ====================
-
-let ringtoneInterval = null;
-
-function playRingtone() {
-    try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        ringtoneInterval = setInterval(() => {
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            gainNode.gain.value = 0.1;
-            
-            oscillator.start();
-            setTimeout(() => oscillator.stop(), 200);
-        }, 400);
-    } catch (e) {
-        console.log('Ringtone not supported');
-    }
-}
-
-function stopRingtone() {
-    if (ringtoneInterval) {
-        clearInterval(ringtoneInterval);
-        ringtoneInterval = null;
     }
 }
 
@@ -654,4 +681,4 @@ function handleKeyPress(event) {
     }
 }
 
-console.log('⚡ Syncware 2.0 Fast Edition loaded!');
+console.log('⚡ Syncware loaded! Send images & make calls!');
