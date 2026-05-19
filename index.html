@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Syncware 2.0 - Chat, Call, Share 💕</title>
+    <title>Syncware 2.0 - Chat, Share 💕</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
             <p class="hint">🔒 All messages & images auto-delete</p>
             <div class="features">
                 <span>💬 Chat</span>
-                <span>📞 Call</span>
+                
                 <span>📸 Images</span>
                 <span>⏰ 10min</span>
             </div>
@@ -36,7 +36,6 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button class="call-btn" onclick="startCall('voice')" title="Voice Call">📞</button>
                 <button class="call-btn" onclick="startCall('video')" title="Video Call">📹</button>
             </div>
         </div>
@@ -77,13 +76,13 @@
         </div>
         <div class="call-controls">
             <button class="call-control-btn mute-btn" onclick="toggleMute()">🎤</button>
-            <button class="call-control-btn end-call" onclick="endCall()">📞</button>
+       
         </div>
     </div>
 
     <!-- Incoming Call Notification -->
     <div id="incomingCall">
-        <div style="font-size: 50px; margin-bottom: 15px;">📞</div>
+        
         <h3><span id="callerName"></span> is calling...</h3>
         <p id="callType" style="color: #666;"></p>
         <div class="incoming-actions">
