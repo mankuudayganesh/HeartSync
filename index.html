@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syncware - Private Chat 💕</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <div style="background: white; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+            <div style="font-size: 50px; margin-bottom: 15px;">💕</div>
+            <h1 style="background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 32px; margin-bottom: 10px;">Syncware</h1>
+            <p style="color: #666; margin-bottom: 25px;">Private chat. No history. Just us.</p>
+            <input type="text" id="nameInput" placeholder="Your name..." style="width: 100%; padding: 15px; margin-bottom: 15px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; outline: none;">
+            <button onclick="startChat()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">Start Chatting 💬</button>
+            <p style="font-size: 12px; color: #999; margin-top: 15px;">🔒 Messages disappear when you close this tab</p>
+        </div>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chatScreen" style="display: none; width: 100%; max-width: 500px; height: 90vh; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: auto; flex-direction: column; overflow: hidden;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="font-size: 30px;">💑</div>
+                <div>
+                    <h2 style="font-size: 18px; margin: 0;">Syncware Chat</h2>
+                    <p style="font-size: 12px; margin: 0; opacity: 0.9;">🟢 Connected</p>
+                </div>
+            </div>
+            <div style="font-size: 11px; background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 15px;">🔒 No storage</div>
+        </div>
+
+        <!-- Messages -->
+        <div id="messages" style="flex: 1; padding: 20px; overflow-y: auto; background: #f0f2f5;"></div>
+
+        <!-- Input -->
+        <div style="padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px;">
+            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()" style="flex: 1; padding: 12px 20px; border: 2px solid #e0e0e0; border-radius: 25px; font-size: 15px; outline: none;">
+            <button onclick="sendMessage()" style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea, #764ba2); border: none; border-radius: 50%; color: white; cursor: pointer; font-size: 20px;">➤</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
