@@ -1,34 +1,274 @@
-/* WhatsApp-Style Chat Layout */
+/* ==================== RESET & BASE ==================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* ==================== LOGIN SCREEN ==================== */
+#loginScreen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-card {
+    background: white;
+    padding: 40px 30px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-card .icon {
+    font-size: 50px;
+    margin-bottom: 15px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.login-card h1 {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 32px;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.login-card p {
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 14px;
+}
+
+#nameInput {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 16px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#nameInput:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#startBtn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#startBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+#startBtn:active {
+    transform: translateY(0);
+}
+
+#startBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.hint {
+    font-size: 12px;
+    color: #999;
+    margin-top: 15px;
+}
+
+.features {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    font-size: 11px;
+    color: #888;
+    flex-wrap: wrap;
+}
+
+.features span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #f5f5f5;
+    padding: 5px 10px;
+    border-radius: 15px;
+}
+
+/* ==================== CHAT SCREEN ==================== */
 #chatScreen {
     display: none;
     max-width: 500px;
     margin: 0 auto;
     height: 100vh;
-    background: #efeae2; /* WhatsApp background */
+    background: #efeae2;
+    flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,0.2);
+}
+
+/* Chat Header */
+.chat-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-left .avatar {
+    font-size: 28px;
+    background: rgba(255,255,255,0.2);
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-left h2 {
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.status {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.call-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.call-btn:hover {
+    background: rgba(255,255,255,0.4);
+    transform: scale(1.05);
+}
+
+.call-btn:active {
+    transform: scale(0.95);
+}
+
+/* Messages Container */
+.messages-container {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    background: #efeae2;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4d4d4' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    display: flex;
     flex-direction: column;
 }
 
-.messages-container {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background: #efeae2;
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4d4d4' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    display: flex;
-    flex-direction: column;
+/* Welcome Message */
+.welcome-message {
+    text-align: center;
+    padding: 30px 20px;
+    background: white;
+    border-radius: 12px;
+    margin: auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    max-width: 250px;
+}
+
+.welcome-message span {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.welcome-message p {
+    font-size: 16px;
+    color: #333;
+    font-weight: 600;
+}
+
+.sub-text {
+    font-size: 12px !important;
+    color: #999 !important;
+    font-weight: normal !important;
+    margin-top: 5px;
 }
 
 /* Message Wrapper */
 .message-wrapper {
     display: flex;
-    margin-bottom: 2px;
-    animation: messageIn 0.3s ease;
+    margin-bottom: 3px;
+    animation: messageSlide 0.3s ease;
 }
 
-@keyframes messageIn {
+@keyframes messageSlide {
     from { 
         opacity: 0; 
-        transform: translateY(20px); 
+        transform: translateY(15px); 
     }
     to { 
         opacity: 1; 
@@ -46,36 +286,34 @@
 
 /* Message Bubbles */
 .message-bubble {
-    max-width: 70%;
-    padding: 8px 12px;
+    max-width: 75%;
+    padding: 7px 10px;
     border-radius: 8px;
     position: relative;
     word-wrap: break-word;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 1px rgba(0,0,0,0.08);
 }
 
 .message-sent {
-    background: #d9fdd3; /* WhatsApp green */
+    background: #d9fdd3;
     border-top-right-radius: 2px;
+    margin-left: 50px;
 }
 
 .message-received {
     background: white;
     border-top-left-radius: 2px;
-}
-
-/* Grouped messages (remove gap) */
-.message-bubble.grouped {
-    margin-top: 1px;
-    border-top-right-radius: 8px;
-    border-top-left-radius: 8px;
+    margin-right: 50px;
 }
 
 .message-name {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
     margin-bottom: 2px;
-    color: #6a2c91; /* WhatsApp purple for names */
+}
+
+.message-in .message-name {
+    color: #6a2c91;
 }
 
 .message-sent .message-name {
@@ -88,43 +326,35 @@
     color: #303030;
 }
 
-.message-sent .message-text {
-    color: #303030;
-}
-
-/* Message Meta (time + checks) */
+/* Message Meta */
 .message-meta {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 4px;
+    gap: 3px;
     margin-top: 2px;
     float: right;
-    margin-left: 10px;
+    margin-left: 8px;
 }
 
 .message-time {
-    font-size: 11px;
+    font-size: 10px;
     color: #667781;
-}
-
-.message-check {
-    font-size: 11px;
-    color: #53bdeb; /* WhatsApp blue checks */
 }
 
 .message-sent .message-time {
     color: #5d8c6b;
 }
 
-.message-sent .message-check {
+.message-check {
+    font-size: 10px;
     color: #53bdeb;
 }
 
 /* Date Separator */
 .date-separator {
     text-align: center;
-    margin: 10px 0;
+    margin: 15px 0;
     display: flex;
     justify-content: center;
 }
@@ -132,76 +362,98 @@
 .date-separator span {
     background: #e1f3fb;
     color: #54656f;
-    padding: 5px 12px;
+    padding: 6px 14px;
     border-radius: 8px;
     font-size: 12px;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 /* System Messages */
 .system-message {
     text-align: center;
-    margin: 10px 0;
+    margin: 10px auto;
     font-size: 12px;
     color: #667781;
     background: #fff3cd;
-    padding: 5px 12px;
+    padding: 6px 14px;
     border-radius: 8px;
-    display: inline-block;
-    margin-left: auto;
-    margin-right: auto;
     width: fit-content;
+    max-width: 80%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 /* Image Container */
 .image-container {
     position: relative;
     cursor: pointer;
-    max-width: 250px;
-    border-radius: 5px;
+    max-width: 220px;
+    border-radius: 6px;
     overflow: hidden;
+    margin-bottom: 4px;
 }
 
 .chat-image {
     width: 100%;
     display: block;
-    border-radius: 5px;
+    border-radius: 6px;
 }
 
 .image-timer {
     position: absolute;
     bottom: 5px;
     right: 5px;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.75);
     color: white;
-    padding: 3px 8px;
+    padding: 2px 8px;
     border-radius: 10px;
-    font-size: 11px;
+    font-size: 10px;
+    font-weight: 600;
 }
 
 .image-actions {
     display: flex;
-    gap: 5px;
-    margin-top: 5px;
+    gap: 4px;
+    margin-top: 4px;
 }
 
 .download-btn, .delete-btn {
-    background: rgba(0,0,0,0.1);
+    background: rgba(0,0,0,0.08);
     border: none;
     padding: 4px 8px;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
+    transition: background 0.2s;
+}
+
+.download-btn:hover, .delete-btn:hover {
+    background: rgba(0,0,0,0.15);
 }
 
 /* Input Area */
 .input-area {
-    padding: 10px 15px;
+    padding: 10px 12px;
     background: #f0f2f5;
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
     border-top: 1px solid #e0e0e0;
+}
+
+.image-upload-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.image-upload-btn:hover {
+    background: rgba(0,0,0,0.05);
 }
 
 #messageInput {
@@ -209,25 +461,202 @@
     padding: 10px 15px;
     border: none;
     border-radius: 20px;
-    font-size: 15px;
+    font-size: 14px;
     outline: none;
     background: white;
+    min-width: 0;
+}
+
+#messageInput:focus {
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
 .send-btn {
-    width: 45px;
-    height: 45px;
-    background: #00a884; /* WhatsApp green send button */
+    width: 42px;
+    height: 42px;
+    background: #00a884;
     border: none;
     border-radius: 50%;
     color: white;
-    font-size: 18px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
 }
 
-/* Smooth scrollbar */
+.send-btn:hover {
+    background: #008f72;
+    transform: scale(1.05);
+}
+
+.send-btn:active {
+    transform: scale(0.95);
+}
+
+/* ==================== CALL SCREEN ==================== */
+#callScreen {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    z-index: 1000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.call-header {
+    color: white;
+    font-size: 18px;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.video-container {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.video-box {
+    width: 260px;
+    height: 190px;
+    background: #2a2a2a;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    border: 2px solid #444;
+}
+
+.video-box video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-label {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    color: white;
+    font-size: 11px;
+    background: rgba(0,0,0,0.5);
+    padding: 3px 8px;
+    border-radius: 8px;
+}
+
+.call-controls {
+    display: flex;
+    gap: 20px;
+}
+
+.call-control-btn {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 22px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.call-control-btn:hover {
+    transform: scale(1.1);
+}
+
+.end-call {
+    background: #ff4444;
+    color: white;
+}
+
+.mute-btn {
+    background: #555;
+    color: white;
+}
+
+/* ==================== INCOMING CALL ==================== */
+#incomingCall {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 30px 25px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    z-index: 1001;
+    min-width: 280px;
+    animation: popIn 0.3s ease;
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+#incomingCall h3 {
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.incoming-actions {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.accept-btn, .reject-btn {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.accept-btn {
+    background: #4CAF50;
+    color: white;
+}
+
+.accept-btn:hover {
+    background: #45a049;
+    transform: scale(1.1);
+}
+
+.reject-btn {
+    background: #ff4444;
+    color: white;
+}
+
+.reject-btn:hover {
+    background: #e03939;
+    transform: scale(1.1);
+}
+
+/* ==================== SCROLLBAR ==================== */
 .messages-container::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
 }
 
 .messages-container::-webkit-scrollbar-track {
@@ -235,6 +664,44 @@
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 500px) {
+    #chatScreen {
+        max-width: 100%;
+    }
+    
+    .message-bubble {
+        max-width: 85%;
+    }
+    
+    .message-sent {
+        margin-left: 30px;
+    }
+    
+    .message-received {
+        margin-right: 30px;
+    }
+    
+    .video-box {
+        width: 150px;
+        height: 120px;
+    }
+    
+    .video-container {
+        gap: 10px;
+    }
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
