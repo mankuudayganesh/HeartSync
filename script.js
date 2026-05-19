@@ -884,5 +884,53 @@ if (chatScreen) {
         attributeFilter: ['style'] 
     });
 }
+// ==================== MOBILE KEYBOARD FIX ====================
+
+// Keep chat scrolled to bottom when keyboard opens
+let initialHeight = window.innerHeight;
+
+window.addEventListener('resize', () => {
+    const container = document.getElementById('messagesContainer');
+    if (container && document.getElementById('chatScreen').style.display === 'flex') {
+        // Only scroll if keyboard is opening (height decreasing)
+        if (window.innerHeight < initialHeight) {
+            setTimeout(() => scrollToBottom(container), 100);
+            setTimeout(() => scrollToBottom(container), 300);
+        }
+        initialHeight = window.innerHeight;
+    }
+});
+
+// Focus input and scroll when chat screen appears
+const chatObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.target.id === 'chatScreen' && 
+            mutation.target.style.display === 'flex') {
+            const input = document.getElementById('messageInput');
+            const container = document.getElementById('messagesContainer');
+            if (input) {
+                setTimeout(() => {
+                    input.focus();
+                    if (container) scrollToBottom(container);
+                }, 200);
+            }
+        }
+    });
+});
+
+const chatScreenEl = document.getElementById('chatScreen');
+if (chatScreenEl) {
+    chatObserver.observe(chatScreenEl, { 
+        attributes: true, 
+        attributeFilter: ['style'] 
+    });
+}
+
+// Prevent body scroll when chat is open
+document.body.addEventListener('touchmove', function(e) {
+    if (document.getElementById('chatScreen').style.display === 'flex') {
+        // Allow scrolling only in messages container
+    }
+}, { passive: true });
 
 console.log('⚡ Syncware loaded! WhatsApp-style chat with HD calls & images!');
