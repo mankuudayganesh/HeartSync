@@ -69,7 +69,6 @@ function handleMessage(data) {
         case 'user-joined':
             addSystemMessage(`${data.username} joined! 💚`);
             remoteUserId = data.userId;
-            // Update partner name in header
             document.querySelector('.status').textContent = `🟢 ${data.username} online`;
             break;
             
@@ -96,7 +95,6 @@ function handleMessage(data) {
             addImageMessage(data.username, data.imageData, data.imageId, data.timestamp, data.userId === myUserId);
             break;
             
-        // CALL SIGNALING
         case 'call-start':
             handleIncomingCall(data);
             break;
@@ -125,6 +123,10 @@ function handleMessage(data) {
             
         case 'ice-candidate':
             handleICECandidate(data);
+            break;
+            
+        case 'error':
+            alert(data.message);
             break;
     }
 }
@@ -161,11 +163,11 @@ function addMessage(sender, text, time, isMine) {
     container.scrollTop = container.scrollHeight;
 }
 
-// ==================== IMAGE WITH CAMERA & GALLERY OPTION ====================
+// ==================== IMAGE WITH CAMERA & GALLERY ====================
 
 function sendImage() {
-    // Show option dialog
     const overlay = document.createElement('div');
+    overlay.id = 'imagePickerOverlay';
     overlay.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.8); z-index: 9999;
@@ -173,15 +175,15 @@ function sendImage() {
     `;
     
     overlay.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 300px;">
-            <h3 style="margin-bottom: 20px;">Send Image 📸</h3>
-            <button id="cameraBtn" style="display: block; width: 100%; padding: 15px; margin-bottom: 10px; background: #667eea; color: white; border: none; border-radius: 12px; font-size: 16px; cursor: pointer;">
+        <div style="background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 300px; width: 90%;">
+            <h3 style="margin-bottom: 20px; color: #333;">Send Image 📸</h3>
+            <button id="cameraBtn" style="display: block; width: 100%; padding: 15px; margin-bottom: 10px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 12px; font-size: 16px; cursor: pointer;">
                 📷 Take Photo
             </button>
-            <button id="galleryBtn" style="display: block; width: 100%; padding: 15px; margin-bottom: 10px; background: #764ba2; color: white; border: none; border-radius: 12px; font-size: 16px; cursor: pointer;">
+            <button id="galleryBtn" style="display: block; width: 100%; padding: 15px; margin-bottom: 10px; background: linear-gradient(135deg, #764ba2, #667eea); color: white; border: none; border-radius: 12px; font-size: 16px; cursor: pointer;">
                 🖼️ Choose from Gallery
             </button>
-            <button id="cancelBtn" style="display: block; width: 100%; padding: 12px; background: #e0e0e0; color: #333; border: none; border-radius: 12px; font-size: 14px; cursor: pointer;">
+            <button id="cancelImageBtn" style="display: block; width: 100%; padding: 12px; background: #f0f0f0; color: #333; border: none; border-radius: 12px; font-size: 14px; cursor: pointer;">
                 Cancel
             </button>
         </div>
@@ -189,24 +191,20 @@ function sendImage() {
     
     document.body.appendChild(overlay);
     
-    // Camera button
     document.getElementById('cameraBtn').onclick = () => {
         document.body.removeChild(overlay);
         openCamera();
     };
     
-    // Gallery button
     document.getElementById('galleryBtn').onclick = () => {
         document.body.removeChild(overlay);
         openGallery();
     };
     
-    // Cancel button
-    document.getElementById('cancelBtn').onclick = () => {
+    document.getElementById('cancelImageBtn').onclick = () => {
         document.body.removeChild(overlay);
     };
     
-    // Also close on overlay click
     overlay.onclick = (e) => {
         if (e.target === overlay) {
             document.body.removeChild(overlay);
@@ -218,7 +216,7 @@ function openCamera() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.capture = 'environment'; // Opens rear camera on mobile
+    input.capture = 'environment';
     
     input.onchange = async (e) => {
         const file = e.target.files[0];
@@ -232,7 +230,6 @@ function openGallery() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    // No capture attribute = opens file picker/gallery
     
     input.onchange = async (e) => {
         const file = e.target.files[0];
@@ -246,7 +243,6 @@ async function processAndSendImage(file) {
     addSystemMessage('📤 Processing image...');
     
     try {
-        // Compress image
         const compressedImage = await compressImage(file, 800, 0.6);
         
         if (compressedImage.length > 500000) {
@@ -357,7 +353,9 @@ function deleteImage(imageId) {
     if (element) {
         element.style.opacity = '0';
         element.style.transition = 'opacity 0.3s';
-        setTimeout(() => element.remove(), 300);
+        setTimeout(() => {
+            if (element.parentNode) element.remove();
+        }, 300);
         addSystemMessage('🖼️ Image deleted');
     }
 }
@@ -403,7 +401,7 @@ function viewFullImage(imageId) {
     document.body.appendChild(overlay);
 }
 
-// ==================== FIXED CALLS ====================
+// ==================== CRYSTAL CLEAR CALLS ====================
 
 async function startCall(callType) {
     if (!remoteUserId) {
@@ -416,36 +414,55 @@ async function startCall(callType) {
     callAccepted = false;
     
     try {
+        // OPTIMIZED AUDIO FOR CRYSTAL CLEAR VOICE
         const constraints = {
-            audio: true,
-            video: callType === 'video' ? { width: 640, height: 480 } : false
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 48000,
+                channelCount: 1,
+                latency: 0
+            },
+            video: callType === 'video' ? { 
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                frameRate: { ideal: 24 }
+            } : false
         };
         
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (!audioTrack) {
+            alert('No microphone found! Please check your device.');
+            return;
+        }
+        console.log('🎤 Audio track:', audioTrack.label, 'Settings:', audioTrack.getSettings());
         
         document.getElementById('callScreen').style.display = 'flex';
         document.getElementById('localVideo').srcObject = localStream;
         document.getElementById('callStatus').textContent = 'Calling... 📞';
         
-        // Create peer connection FIRST
         await createPeerConnection();
         
-        // Add local tracks
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
+            console.log('➕ Added track:', track.kind);
         });
         
-        // Send call start
         ws.send(JSON.stringify({
             type: 'call-start',
             targetUserId: remoteUserId,
             callType: callType
         }));
         
-        // Create and send offer AFTER a short delay to ensure remote side is ready
         setTimeout(async () => {
             try {
-                const offer = await peerConnection.createOffer();
+                const offer = await peerConnection.createOffer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: callType === 'video'
+                });
                 await peerConnection.setLocalDescription(offer);
                 
                 ws.send(JSON.stringify({
@@ -453,6 +470,8 @@ async function startCall(callType) {
                     targetUserId: remoteUserId,
                     offer: offer
                 }));
+                
+                console.log('📤 Offer sent with HD audio settings');
             } catch (error) {
                 console.error('Offer error:', error);
             }
@@ -461,9 +480,11 @@ async function startCall(callType) {
     } catch (error) {
         console.error('Call error:', error);
         if (error.name === 'NotAllowedError') {
-            alert('Please allow camera/microphone access!');
+            alert('Please allow microphone access to make calls!');
+        } else if (error.name === 'NotFoundError') {
+            alert('No microphone found on your device.');
         } else {
-            alert('Failed to start call. Check permissions.');
+            alert('Failed to start call. Error: ' + error.message);
         }
         endCall();
     }
@@ -474,10 +495,34 @@ async function createPeerConnection() {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' }
-        ]
+        ],
+        iceCandidatePoolSize: 2,
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require'
     };
     
     peerConnection = new RTCPeerConnection(configuration);
+    
+    // Set audio codec preferences for HD voice
+    const audioTransceiver = peerConnection.addTransceiver('audio', {
+        direction: 'sendrecv',
+        streams: []
+    });
+    
+    if (audioTransceiver.setCodecPreferences) {
+        const codecs = RTCRtpSender.getCapabilities('audio')?.codecs || [];
+        const opusCodec = codecs.find(codec => 
+            codec.mimeType === 'audio/opus' && codec.clockRate === 48000
+        );
+        if (opusCodec) {
+            try {
+                audioTransceiver.setCodecPreferences([opusCodec]);
+                console.log('🎵 Set Opus codec for HD audio');
+            } catch (e) {
+                console.log('Codec preference not supported');
+            }
+        }
+    }
     
     peerConnection.onicecandidate = (event) => {
         if (event.candidate && remoteUserId) {
@@ -490,14 +535,42 @@ async function createPeerConnection() {
     };
     
     peerConnection.ontrack = (event) => {
-        console.log('📹 Got remote track!');
+        console.log('📹 Got remote track:', event.track.kind);
         const remoteVideo = document.getElementById('remoteVideo');
-        remoteVideo.srcObject = event.streams[0];
+        
+        if (event.track.kind === 'audio') {
+            const remoteAudio = new Audio();
+            remoteAudio.srcObject = new MediaStream([event.track]);
+            remoteAudio.play().catch(e => console.log('Audio play error:', e));
+            console.log('🔊 Remote audio playing through Opus HD codec');
+        }
+        
+        if (event.track.kind === 'video') {
+            remoteVideo.srcObject = event.streams[0];
+        }
+        
         document.getElementById('callStatus').textContent = 'Connected! 📞';
     };
     
+    peerConnection.onconnectionstatechange = () => {
+        console.log('📡 Connection state:', peerConnection.connectionState);
+        
+        switch(peerConnection.connectionState) {
+            case 'connected':
+                document.getElementById('callStatus').textContent = 'Connected! 📞';
+                break;
+            case 'disconnected':
+                document.getElementById('callStatus').textContent = 'Reconnecting...';
+                break;
+            case 'failed':
+                endCall();
+                break;
+        }
+    };
+    
     peerConnection.oniceconnectionstatechange = () => {
-        console.log('ICE state:', peerConnection.iceConnectionState);
+        console.log('🧊 ICE state:', peerConnection.iceConnectionState);
+        
         if (peerConnection.iceConnectionState === 'connected') {
             document.getElementById('callStatus').textContent = 'Connected! 📞';
         } else if (peerConnection.iceConnectionState === 'disconnected' || 
@@ -523,8 +596,19 @@ async function acceptCall() {
     
     try {
         const constraints = {
-            audio: true,
-            video: currentCallType === 'video' ? { width: 640, height: 480 } : false
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 48000,
+                channelCount: 1,
+                latency: 0
+            },
+            video: currentCallType === 'video' ? { 
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                frameRate: { ideal: 24 }
+            } : false
         };
         
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -539,7 +623,6 @@ async function acceptCall() {
             peerConnection.addTrack(track, localStream);
         });
         
-        // Send accept signal
         ws.send(JSON.stringify({
             type: 'call-accept',
             targetUserId: remoteUserId
@@ -547,7 +630,7 @@ async function acceptCall() {
         
     } catch (error) {
         console.error('Accept error:', error);
-        alert('Failed to accept call. Check permissions.');
+        alert('Failed to accept call. Error: ' + error.message);
         endCall();
     }
 }
@@ -681,4 +764,4 @@ function handleKeyPress(event) {
     }
 }
 
-console.log('⚡ Syncware loaded! Send images & make calls!');
+console.log('⚡ Syncware loaded! HD Voice Calls + Camera/Gallery Images ready!');
