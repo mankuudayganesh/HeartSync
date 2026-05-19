@@ -1,6 +1,9 @@
 let ws;
 let myName = '';
 
+// IMPORTANT: Change this URL after deploying backend
+const BACKEND_URL = 'wss://YOUR_BACKEND_URL.onrender.com';
+
 function startChat() {
     myName = document.getElementById('nameInput').value.trim();
     
@@ -9,17 +12,15 @@ function startChat() {
         return;
     }
 
-    // Connect to WebSocket
-    ws = new WebSocket('ws://localhost:3000');
+    // Connect to the RENDER backend (not localhost!)
+    ws = new WebSocket(BACKEND_URL);
 
     ws.onopen = () => {
-        console.log('Connected!');
+        console.log('Connected to backend!');
         
-        // Switch screens
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('chatScreen').style.display = 'flex';
         
-        // Send join message
         const joinMsg = {
             type: 'system',
             username: 'System',
@@ -41,8 +42,8 @@ function startChat() {
     };
 
     ws.onerror = (error) => {
-        console.log('Error:', error);
-        alert('Connection error! Make sure the server is running.');
+        console.log('WebSocket error:', error);
+        addSystemMessage('⚠️ Connection error. Is the backend running?');
     };
 
     ws.onclose = () => {
